@@ -12,28 +12,31 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <string>
-#include <map>
-#include <iostream>
 #include <array>
 #include <exception>
+#include <iostream>
+#include <map>
+#include <string>
+
+#include "opentelemetry/context/context.h"
+#include "opentelemetry/nostd/shared_ptr.h"
+#include "opentelemetry/nostd/span.h"
+#include "opentelemetry/nostd/string_view.h"
+#include "opentelemetry/nostd/variant.h"
+#include "opentelemetry/trace/default_span.h"
+#include "opentelemetry/trace/default_tracer.h"
+#include "opentelemetry/trace/key_value_iterable.h"
 #include "opentelemetry/trace/propagation/http_text_format.h"
+#include "opentelemetry/trace/span.h"
 #include "opentelemetry/trace/span_context.h"
 #include "opentelemetry/trace/trace_state.h"
-#include "opentelemetry/trace/key_value_iterable.h"
-#include "opentelemetry/context/context.h"
-#include "opentelemetry/nostd/string_view.h"
-#include "opentelemetry/trace/span.h"
-#include "opentelemetry/nostd/shared_ptr.h"
-#include "opentelemetry/nostd/variant.h"
-#include "opentelemetry/nostd/span.h"
-#include "opentelemetry/trace/default_span.h"
 
 OPENTELEMETRY_BEGIN_NAMESPACE
 namespace trace
 {
 namespace propagation
 {
+
 static const nostd::string_view kTraceParent = "traceparent";
 static const nostd::string_view kTraceState = "tracestate";
 static const int kVersionBytes = 2;
@@ -68,9 +71,9 @@ class HttpTraceContext : public HTTPTextFormat<T> {
         }
 
         context::Context Extract(Getter getter, const T &carrier, context::Context &context) override {
-            SpanContext span_context = ExtractImpl(getter,carrier);
+            SpanContext span_context = ExtractImpl(getter, carrier);
             nostd::string_view span_key = "current-span";
-            nostd::shared_ptr<Span> sp{new DefaultSpan(span_context)};
+            nostd::shared_ptr<Span> sp{new DefaultSpan(&tracer_, span_context)};
             return context.SetValue(span_key,sp);
         }
 
@@ -304,17 +307,10 @@ class HttpTraceContext : public HTTPTextFormat<T> {
                 return context_from_parent_header;
             }
         }
-        const nostd::string_view kTraceParent = "traceparent";
-        const nostd::string_view kTraceState = "tracestate";
-        const int kVersionBytes = 2;
-        const int kTraceIdBytes = 32;
-        const int kSpanIdBytes = 16;
-        const int kTraceFlagBytes = 2;
-        const int kTraceDelimiterBytes = 3;
-        const int kHeaderSize = kVersionBytes + kTraceIdBytes + kSpanIdBytes + kTraceFlagBytes + kTraceDelimiterBytes;
-        const int kTraceStateMaxMembers = 32;
-        const int kHeaderElementLengths[4] = {2,32,16,2};
+  DefaultTracer tracer_;
+
 };
+
 }
 }  // namespace trace
 OPENTELEMETRY_END_NAMESPACE

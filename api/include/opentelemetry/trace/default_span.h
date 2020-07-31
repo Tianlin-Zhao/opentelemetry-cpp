@@ -4,7 +4,7 @@
 #include "opentelemetry/trace/canonical_code.h"
 #include "opentelemetry/common/attribute_value.h"
 #include "opentelemetry/trace/span.h"
-//#include "opentelemetry/trace/tracer.h"
+#include "opentelemetry/trace/tracer.h"
 
 #define pass
 OPENTELEMETRY_BEGIN_NAMESPACE
@@ -12,9 +12,9 @@ namespace trace {
 class DefaultSpan: public Span {
   public:
     // Returns an invalid span.
-    static DefaultSpan GetInvalid() {
-        return DefaultSpan(SpanContext::GetInvalid());
-    }
+    // static DefaultSpan GetInvalid() {
+    //     return DefaultSpan(SpanContext::GetInvalid());
+    // }
 
     trace::SpanContext GetContext() const noexcept {
         return span_context_;
@@ -57,11 +57,11 @@ class DefaultSpan: public Span {
       return "DefaultSpan";
     }
 
-    DefaultSpan() = default;
+    DefaultSpan(Tracer *tracer) : tracer_(tracer) {}
 
-    DefaultSpan(SpanContext span_context) {
-       this->span_context_ = span_context;
-    }
+    DefaultSpan(Tracer *tracer, SpanContext span_context)
+        : span_context_(span_context), tracer_(tracer)
+    {}
 
     // movable and copiable
     DefaultSpan(DefaultSpan&& spn) : span_context_(spn.GetContext()) {}
@@ -69,18 +69,17 @@ class DefaultSpan: public Span {
 
     // This is an invalid implementation
     trace::Tracer &tracer() const noexcept {
-      trace::Tracer tracer = trace::Tracer();
-      return tracer; // Invalid tracer
+      return *tracer_;
     }
 
     // Creates an instance of this class with spancontext.
-    static DefaultSpan Create(SpanContext span_context) {
-      return DefaultSpan(span_context);
-    }
+    // static DefaultSpan Create(SpanContext span_context) {
+    //   return DefaultSpan(span_context);
+    // }
 
   private:
     SpanContext span_context_;
-    trace::Tracer tracer_;
+    Tracer *tracer_;
 };
 }
 OPENTELEMETRY_END_NAMESPACE
