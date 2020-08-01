@@ -9,6 +9,7 @@
 #include "opentelemetry/trace/span.h"
 #include "opentelemetry/trace/tracer.h"
 #include "opentelemetry/trace/tracer_provider.h"
+#include "opentelemetry/trace/span_context.h"
 #include "opentelemetry/version.h"
 
 #include <memory>
@@ -22,7 +23,7 @@ namespace trace
 class NoopSpan final : public Span
 {
 public:
-  explicit NoopSpan(const std::shared_ptr<Tracer> &tracer) noexcept : tracer_{tracer} {}
+  explicit NoopSpan(const std::shared_ptr<Tracer> &tracer, std::shared_ptr<SpanContext> &span_context_) noexcept : tracer_{tracer}, span_context_{span_context_} {}
 
   void SetAttribute(nostd::string_view /*key*/,
                     const common::AttributeValue & /*value*/) noexcept override
@@ -46,10 +47,13 @@ public:
 
   bool IsRecording() const noexcept override { return false; }
 
+  SpanContext context() const noexcept { return *span_context_; }
+
   Tracer &tracer() const noexcept override { return *tracer_; }
 
 private:
   std::shared_ptr<Tracer> tracer_;
+  std::shared_ptr<SpanContext> span_context_;
 };
 
 /**

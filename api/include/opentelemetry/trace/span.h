@@ -5,7 +5,6 @@
 #include "opentelemetry/common/attribute_value.h"
 #include "opentelemetry/core/timestamp.h"
 #include "opentelemetry/nostd/span.h"
-#include "opentelemetry/trace/span_context.h"
 #include "opentelemetry/nostd/string_view.h"
 #include "opentelemetry/trace/canonical_code.h"
 #include "opentelemetry/trace/key_value_iterable_view.h"
@@ -55,7 +54,7 @@ struct EndSpanOptions
 };
 
 class Tracer;
-class DefaultTracer;
+
 /**
  * A Span represents a single operation within a Trace.
  */
@@ -78,7 +77,7 @@ public:
   // Sets an attribute on the Span. If the Span previously contained a mapping for
   // the key, the old value is replaced.
   virtual void SetAttribute(nostd::string_view key,
-                            const common::AttributeValue &value) noexcept = 0;
+                            const common::AttributeValue &&value) noexcept = 0;
 
   // Adds an event to the Span.
   virtual void AddEvent(nostd::string_view name) noexcept = 0;
@@ -147,11 +146,13 @@ public:
   virtual void End(const EndSpanOptions &options = {}) noexcept = 0;
 
   // TODO
-  // SpanContext context() const noexcept = 0;
-  virtual trace::SpanContext GetContext() const noexcept = 0;
+  virtual SpanContext context() const noexcept = 0;
+
   // Returns true if this Span is recording tracing events (e.g. SetAttribute,
   // AddEvent).
   virtual bool IsRecording() const noexcept = 0;
+
+  virtual Tracer &tracer() const noexcept = 0;
 };
 }  // namespace trace
 OPENTELEMETRY_END_NAMESPACE
