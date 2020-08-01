@@ -8,6 +8,7 @@
 #include "opentelemetry/nostd/string_view.h"
 #include "opentelemetry/trace/canonical_code.h"
 #include "opentelemetry/trace/key_value_iterable_view.h"
+#include "opentelemetry/trace/span_context.h"
 #include "opentelemetry/version.h"
 
 OPENTELEMETRY_BEGIN_NAMESPACE
