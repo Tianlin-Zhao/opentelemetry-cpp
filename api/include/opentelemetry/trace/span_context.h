@@ -14,10 +14,13 @@
 
 #pragma once
 
+#include <iostream>
+
 #include "opentelemetry/nostd/unique_ptr.h"
 #include "opentelemetry/trace/span_id.h"
 #include "opentelemetry/trace/trace_flags.h"
 #include "opentelemetry/trace/trace_id.h"
+#include "opentelemetry/trace/trace_state.h"
 
 OPENTELEMETRY_BEGIN_NAMESPACE
 namespace trace
@@ -30,58 +33,87 @@ class SpanContext final
 public:
   // An invalid SpanContext.
   SpanContext() noexcept
-      : trace_flags_(trace::TraceFlags((uint8_t) false)), remote_parent_(false){};
+      : trace_flags_(new trace::TraceFlags((uint8_t) false)),
+        trace_state_(new TraceState),
+        remote_parent_(false){};
 
   SpanContext(bool sampled_flag, bool has_remote_parent) noexcept
-      : trace_flags_(trace::TraceFlags((uint8_t)sampled_flag)), remote_parent_(has_remote_parent){};
+      : trace_flags_(new trace::TraceFlags((uint8_t)sampled_flag)),
+        trace_state_(new TraceState),
+        remote_parent_(has_remote_parent){};
   SpanContext(TraceId trace_id,
               SpanId span_id,
               TraceFlags trace_flags,
+              TraceState trace_state,
               bool has_remote_parent) noexcept
   {
-    trace_id_      = trace_id;
-    span_id_       = span_id;
-    trace_flags_   = trace_flags;
+    std::cout<<"1"<<std::endl;
+    trace_id_.reset(&trace_id);
+    std::cout<<"2"<<std::endl;
+    span_id_.reset(&span_id);
+    std::cout<<"3"<<std::endl;
+    trace_flags_.reset(&trace_flags);
+    std::cout<<"4"<<std::endl;
+    trace_state_.reset(&trace_state);
+    std::cout<<"5"<<std::endl;
     remote_parent_ = has_remote_parent;
   }
   SpanContext(SpanContext &&ctx)
-      : trace_id_(ctx.trace_id()), span_id_(ctx.span_id()), trace_flags_(ctx.trace_flags())
+      : trace_id_(ctx.trace_id_.get()),
+        span_id_(ctx.span_id_.get()),
+        trace_flags_(ctx.trace_flags_.get()),
+        trace_state_(ctx.trace_state_.get())
   {}
   SpanContext(const SpanContext &ctx)
-      : trace_id_(ctx.trace_id()), span_id_(ctx.span_id()), trace_flags_(ctx.trace_flags())
+      : trace_id_(ctx.trace_id_.get()),
+        span_id_(ctx.span_id_.get()),
+        trace_flags_(ctx.trace_flags_.get()),
+        trace_state_(ctx.trace_state_.get())
   {}
 
   SpanContext &operator=(const SpanContext &ctx)
   {
-    trace_id_    = ctx.trace_id_;
-    span_id_     = ctx.span_id_;
-    trace_flags_ = ctx.trace_flags_;
+    trace_id_.reset(ctx.trace_id_.get());
+    span_id_.reset(ctx.span_id_.get());
+    trace_flags_.reset(ctx.trace_flags_.get());
+    trace_state_.reset(ctx.trace_state_.get());
     return *this;
   };
   SpanContext &operator=(SpanContext &&ctx)
   {
-    trace_id_    = ctx.trace_id_;
-    span_id_     = ctx.span_id_;
-    trace_flags_ = ctx.trace_flags_;
+    trace_id_.reset(ctx.trace_id_.get());
+    span_id_.reset(ctx.span_id_.get());
+    trace_flags_.reset(ctx.trace_flags_.get());
+    trace_state_.reset(ctx.trace_state_.get());
     return *this;
   };
 
-  const TraceId &trace_id() const noexcept { return trace_id_; }
-  const SpanId &span_id() const noexcept { return span_id_; }
-  const TraceFlags &trace_flags() const noexcept { return trace_flags_; }
+  const TraceId &trace_id() const noexcept { return *(trace_id_.get()); }
+  const SpanId &span_id() const noexcept { return *(span_id_.get()); }
+  const TraceFlags &trace_flags() const noexcept { return *(trace_flags_.get()); }
+  const TraceState &trace_state() const noexcept { return *(trace_state_.get()); }
 
-  bool IsValid() const noexcept { return trace_id_.IsValid() && span_id_.IsValid(); }
+  bool IsValid() const noexcept { return trace_id_.get()->IsValid() && span_id_.get()->IsValid(); }
 
   bool HasRemoteParent() const noexcept { return remote_parent_; }
 
   static SpanContext GetInvalid() { return SpanContext(false, false); }
 
-  bool IsSampled() const noexcept { return trace_flags_.IsSampled(); }
+  static SpanContext GetRandom() {
+    return SpanContext(TraceId::GetRandom(), SpanId::GetRandom(), TraceFlags::GetRandom(), TraceState(), true);
+  }
+
+  static SpanContext UpdateSpanId(SpanContext &span_context) {
+    return SpanContext(span_context.trace_id(), SpanId::GetRandom(), TraceFlags::GetRandom(), span_context.trace_state(),span_context.HasRemoteParent());
+  }
+
+  bool IsSampled() const noexcept { return trace_flags_.get()->IsSampled(); }
 
 private:
-  TraceId trace_id_;
-  SpanId span_id_;
-  TraceFlags trace_flags_;
+  nostd::unique_ptr<TraceId> trace_id_;
+  nostd::unique_ptr<SpanId> span_id_;
+  nostd::unique_ptr<TraceFlags> trace_flags_;
+  nostd::unique_ptr<TraceState> trace_state_;  // Never nullptr.
   bool remote_parent_ = false;
 };
 
